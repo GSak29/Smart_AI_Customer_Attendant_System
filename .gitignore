@@ -1,0 +1,23 @@
+# Python virtual environments
+venv/
+firebase_env/
+env/
+
+# Environment variables
+.env
+
+# Node
+node_modules/
+dist/
+build/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+
+# Firebase Admin SDK key
+*firebase-adminsdk*.json
+smartretail-iot-firebase-adminsdk-*.json
