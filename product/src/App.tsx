@@ -32,7 +32,7 @@ function App() {
       try {
         // 1. Get the list of product IDs from python's output
         const res = await fetch('/products.json');
-        const searchResults: { Product_ID: string }[] = await res.json();
+        const searchResults: any[] = await res.json();
 
         if (searchResults.length === 0) {
           setProducts([]);
@@ -49,9 +49,18 @@ function App() {
           const docSnap = await getDoc(docRef);
 
           if (docSnap.exists()) {
-            liveProducts.push(docSnap.data() as Product);
+            const dbData = docSnap.data();
+            liveProducts.push({
+              ...item,
+              ...dbData,
+              Image_URL: dbData.Image_URL || dbData.image_url || item.image_url || item.Image_URL
+            } as Product);
           } else {
-            console.warn(`Product ID ${item.Product_ID} not found in live database.`);
+            console.warn(`Product ID ${item.Product_ID} not found in live database. Using local fallback.`);
+            liveProducts.push({
+              ...item,
+              Image_URL: item.image_url || item.Image_URL || 'https://placehold.co/600x400?text=No+Image',
+            } as Product);
           }
         }
 
@@ -100,7 +109,7 @@ function App() {
       <div className="flex-grow p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 overflow-y-auto bg-slate-50/50">
 
         {/* Left Column: Image Showcase 16:9 */}
-        <div className="flex flex-col w-full lg:col-span-7 h-full gap-4">
+        <div className="flex flex-col w-full lg:col-span-7 h-full gap-4 min-w-0">
           <div className="relative rounded-2xl overflow-hidden bg-white shadow-sm flex-grow aspect-video border border-slate-100 group">
             {/* Background gradient behind image */}
             <div className="absolute inset-0 bg-gradient-to-tr from-orange-50/80 to-slate-50/50 mix-blend-multiply pointer-events-none"></div>
@@ -127,26 +136,55 @@ function App() {
           </div>
 
           {/* Thumbnails Row */}
-          <div className="grid grid-cols-6 lg:grid-cols-8 gap-2 px-1">
-            {products.map((prod, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentIndex(idx)}
-                className={`relative rounded-lg overflow-hidden aspect-square transition-all duration-500 ease-out bg-white ${idx === currentIndex
-                  ? 'ring-2 ring-offset-2 ring-orange-500 shadow-md scale-105 z-10 opacity-100'
-                  : 'ring-1 ring-slate-200 hover:ring-slate-400 opacity-60 hover:opacity-100 grayscale-[50%] hover:grayscale-0'
-                  }`}
-              >
-                <img
-                  src={prod.Image_URL || 'https://placehold.co/600x400?text=No+Image'}
-                  alt={prod.Product_Name}
-                  className="w-full h-full object-cover p-1 bg-slate-50"
-                />
-                {idx === currentIndex && (
-                  <div className="absolute inset-0 bg-orange-500/10 mix-blend-overlay"></div>
-                )}
-              </button>
-            ))}
+          <div className="w-full relative group/scroll">
+            <button
+              onClick={() => {
+                const container = document.getElementById('thumb-scroll');
+                if (container) container.scrollBy({ left: -200, behavior: 'smooth' });
+              }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-8 h-8 md:w-10 md:h-10 bg-white/95 backdrop-blur-md rounded-full flex items-center justify-center shadow-md hover:shadow-lg hover:text-orange-600 hover:scale-110 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 ease-out font-bold z-20 border border-slate-100"
+            >
+              <ChevronLeft className="w-5 h-5 ml-[-2px] stroke-[3]" />
+            </button>
+            <div
+              id="thumb-scroll"
+              className="flex flex-row overflow-x-auto gap-3 px-2 py-3 snap-x scroll-smooth hide-scrollbar"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              <style>{`
+                .hide-scrollbar::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
+              {products.map((prod, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentIndex(idx)}
+                  className={`flex-none w-20 h-20 sm:w-24 sm:h-24 relative rounded-lg overflow-hidden aspect-square transition-all duration-500 ease-out bg-white snap-center ${idx === currentIndex
+                    ? 'ring-2 ring-offset-2 ring-orange-500 shadow-md scale-105 z-10 opacity-100'
+                    : 'ring-1 ring-slate-200 hover:ring-slate-400 opacity-60 hover:opacity-100 grayscale-[50%] hover:grayscale-0'
+                    }`}
+                >
+                  <img
+                    src={prod.Image_URL || 'https://placehold.co/600x400?text=No+Image'}
+                    alt={prod.Product_Name}
+                    className="w-full h-full object-cover p-1 bg-slate-50"
+                  />
+                  {idx === currentIndex && (
+                    <div className="absolute inset-0 bg-orange-500/10 mix-blend-overlay"></div>
+                  )}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const container = document.getElementById('thumb-scroll');
+                if (container) container.scrollBy({ left: 200, behavior: 'smooth' });
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 -mr-2 w-8 h-8 md:w-10 md:h-10 bg-white/95 backdrop-blur-md rounded-full flex items-center justify-center shadow-md hover:shadow-lg hover:text-orange-600 hover:scale-110 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 ease-out font-bold z-20 border border-slate-100"
+            >
+              <ChevronRight className="w-5 h-5 mr-[-2px] stroke-[3]" />
+            </button>
           </div>
         </div>
 
