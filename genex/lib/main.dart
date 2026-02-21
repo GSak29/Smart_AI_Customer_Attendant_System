@@ -52,18 +52,38 @@ class _GenexAppState extends State<GenexApp> {
     });
 
     // Listen for new notifications
+    final startupTime = DateTime.now();
     FirebaseFirestore.instance.collection('notifications').snapshots().listen((snapshot) {
       for (var change in snapshot.docChanges) {
         if (change.type == DocumentChangeType.added) {
           final data = change.doc.data() as Map<String, dynamic>;
-          final title = data['title'] ?? 'New Alert';
-          final message = data['message'] ?? '';
+          final isRead = data['isRead'] ?? false;
           
-          NotificationService().showNotification(
-            id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-            title: title,
-            body: message,
-          );
+          if (!isRead) {
+            // Check if this is truly a newly created notification (after app startup)
+            // or if it's just the initial load of existing unread notifications
+            bool isTrulyNew = false;
+            if (data['timestamp'] != null) {
+              final timestamp = (data['timestamp'] as Timestamp).toDate();
+              // If it was created recently (e.g., after the app started listening)
+              if (timestamp.isAfter(startupTime.subtract(const Duration(seconds: 5)))) {
+                isTrulyNew = true;
+              }
+            } else {
+               // Fallback if no timestamp is found
+               isTrulyNew = true; 
+            }
+
+            if (isTrulyNew) {
+              final title = data['title'] ?? 'New Alert';
+              final message = data['message'] ?? '';
+              NotificationService().showNotification(
+                id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                title: title,
+                body: message,
+              );
+            }
+          }
         }
       }
     });

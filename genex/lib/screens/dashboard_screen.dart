@@ -14,7 +14,7 @@ class DashboardScreen extends StatelessWidget {
           children: [
             Image.asset('assets/logo.png', height: 30),
             const SizedBox(width: 10),
-            const Text('Genex Dashboard'),
+            const Text('Genexa Dashboard'),
           ],
         ),
       ),
