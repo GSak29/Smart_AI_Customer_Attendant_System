@@ -3,6 +3,8 @@ import pandas as pd
 import requests
 import json
 import re
+import firebase_admin
+from firebase_admin import credentials, firestore, storage
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -25,6 +27,7 @@ if not GROQ_API_KEY:
     print("Error: GROQ_API_KEY not found in .env file.")
     exit(1)
 
+
 # API Constants
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = "groq/compound"
@@ -32,6 +35,40 @@ HEADERS = {
     "Authorization": f"Bearer {GROQ_API_KEY}",
     "Content-Type": "application/json"
 }
+
+# Initialize Firebase
+cred = credentials.Certificate("smartretail-iot-firebase-adminsdk-fbsvc-7faa181ef1.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+def get_product_image(product_id):
+    """
+    Fetches the image URL from Firebase for a given product ID.
+    """
+    try:
+        # Check 'products' collection
+        # Assuming product documents might have 'name' or similar field, or ID matches
+        # Or look in 'images' collection if that's how it's structured.
+        # Based on user request: "image urls from the firebase database take the urls that shares the comman database"
+        
+        # Searching in 'products' collection by Document ID (Product_ID)
+        # Using product_id which should be passed to this function
+        doc_ref = db.collection('products').document(str(product_id))
+        doc = doc_ref.get()
+        
+        if doc.exists:
+            data = doc.to_dict()
+            if 'Image_URL' in data:
+                return data['Image_URL']
+            elif 'image_url' in data:
+                return data['image_url']
+            elif 'imageUrl' in data:
+                return data['imageUrl']
+            
+        return "https://placehold.co/600x400?text=No+Image"
+    except Exception as e:
+        print(f"Error fetching image for {product_id}: {e}")
+        return "https://placehold.co/600x400?text=Error"
 
 def identify_categories(text, all_categories):
     """
@@ -119,11 +156,7 @@ def search_products(selected_categories, user_query, df):
         return results
 
     # Simple keyword filtering: check if query keywords exist in any of the description columns
-    # This is a basic implementation; for more advanced matching, we could use fuzzy matching or another LLM step.
-    # However, to "only see category and description", we ensure Product_Name is not used.
-    
     # We won't filter strictly by keywords because the LLM already did the heavy lifting for Category.
-    # But if the user query has specific attributes (e.g., "Teak"), we should try to filter.
     
     # Extract keywords from user query (very basic)
     ignore_words = ['show', 'me', 'a', 'the', 'and', 'with', 'for', 'in']
@@ -133,19 +166,10 @@ def search_products(selected_categories, user_query, df):
         return results
 
     def row_matches(row):
-        # Check if any keyword matches any description field
-        # Note: This is a loose match (OR condition for keywords? AND? Let's use loose for now to avoid over-filtering)
-        # Actually, let's just score them or filter?
-        # User said "searching only sees category and description".
-        # Let's verify if the row text contains at least ONE relevant keyword if it's not a generic query?
-        
         row_text = " ".join([str(row[c]) for c in available_desc_cols if pd.notna(row[c])]).lower()
         return any(k in row_text for k in keywords)
 
     # Apply filtering
-    # If the user input was just "Chair", keywords might be empty or generic.
-    # Let's only filter if we find matches, otherwise return the category-filtered results.
-    
     filtered_results = results[results.apply(row_matches, axis=1)]
     
     if not filtered_results.empty:
@@ -183,17 +207,53 @@ def main():
     # Output Results
     if not results.empty:
         print(f"\nFound {len(results)} matches:")
+        
+        products_list = []
+        
         # Select columns to display
-        display_cols = ['Product_ID', 'Product_Name', 'Category', 'Price_Min_INR', 'Price_Max_INR', 'Stock_Quantity']
+        display_cols = ['Product_ID', 'Product_Name', 'Category', 'Price_Min_INR', 'Price_Max_INR', 'Stock_Quantity', 'Material_Type', 'Wood_Type', 'Size_Description']
         display_cols = [c for c in display_cols if c in results.columns]
         
         for idx, row in results.iterrows():
             print("-" * 20)
+            product_data = {}
             for col in display_cols:
-                print(f"{col}: {row[col]}")
+                val = row[col]
+                print(f"{col}: {val}")
+                # Handle NaN
+                if pd.isna(val):
+                    val = ""
+                product_data[col] = val
+            
+            # Fetch Image
+            image_url = get_product_image(row['Product_ID'])
+            product_data['image_url'] = image_url
+            print(f"Image URL: {image_url}")
+            
+            products_list.append(product_data)
+            
             print("-" * 20)
+            
+        # Export to JSON
+        output_path = os.path.join("d:\\Industrial Project\\product\\public", "products.json")
+        try:
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, 'w') as f:
+                json.dump(products_list, f, indent=4)
+            print(f"\nSuccessfully exported {len(products_list)} products to {output_path}")
+        except Exception as e:
+            print(f"Error exporting JSON: {e}")
+
     else:
         print("No products found for the matched categories.")
+        # Clear the JSON file if no results
+        output_path = os.path.join("d:\\Industrial Project\\product\\public", "products.json")
+        try:
+            if os.path.exists(output_path):
+                 with open(output_path, 'w') as f:
+                    json.dump([], f)
+        except:
+            pass
 
 if __name__ == "__main__":
     main()
