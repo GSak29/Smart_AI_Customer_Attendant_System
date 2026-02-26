@@ -38,8 +38,11 @@ HEADERS = {
 
 # Initialize Firebase
 cred = credentials.Certificate("smartretail-iot-firebase-adminsdk-fbsvc-7faa181ef1.json")
-firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://smartretail-iot-default-rtdb.firebaseio.com'
+})
 db = firestore.client()
+from firebase_admin import db as rtdb
 
 def get_product_image(product_id):
     """
@@ -234,24 +237,18 @@ def main():
             
             print("-" * 20)
             
-        # Export to JSON
-        output_path = os.path.join("d:\\Industrial Project\\product\\public", "products.json")
+        # Export to RTDB
         try:
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            with open(output_path, 'w') as f:
-                json.dump(products_list, f, indent=4)
-            print(f"\nSuccessfully exported {len(products_list)} products to {output_path}")
+            rtdb.reference('extracted_products').set(products_list)
+            print(f"\nSuccessfully exported {len(products_list)} products to Firebase Realtime Database")
         except Exception as e:
-            print(f"Error exporting JSON: {e}")
+            print(f"Error exporting to RTDB: {e}")
 
     else:
         print("No products found for the matched categories.")
-        # Clear the JSON file if no results
-        output_path = os.path.join("d:\\Industrial Project\\product\\public", "products.json")
+        # Clear the RTDB node if no results
         try:
-            if os.path.exists(output_path):
-                 with open(output_path, 'w') as f:
-                    json.dump([], f)
+            rtdb.reference('extracted_products').set([])
         except:
             pass
 

@@ -1,0 +1,5 @@
+pandas
+requests
+firebase-admin
+python-dotenv
+openpyxl

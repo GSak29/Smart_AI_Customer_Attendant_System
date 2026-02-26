@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { ref, onValue } from 'firebase/database';
+import { db, rtdb } from './firebase';
 
 interface Product {
   Product_ID: string;
@@ -20,6 +21,7 @@ interface Product {
   Usage_Type: string;
   Size_Description: string;
   Image_URL?: string;
+  image_url?: string; // Sometimes from python
 }
 
 function App() {
@@ -28,11 +30,15 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchFromFirebase = async () => {
+    const rtdbRef = ref(rtdb, 'extracted_products');
+
+    const unsubscribe = onValue(rtdbRef, async (snapshot) => {
+      setLoading(true);
       try {
-        // 1. Get the list of product IDs from python's output
-        const res = await fetch('/products.json');
-        const searchResults: any[] = await res.json();
+        let searchResults: any[] = [];
+        if (snapshot.exists()) {
+          searchResults = snapshot.val() || [];
+        }
 
         if (searchResults.length === 0) {
           setProducts([]);
@@ -40,7 +46,7 @@ function App() {
           return;
         }
 
-        // 2. Fetch full live details from Firebase for each ID
+        // Fetch full live details from Firebase for each ID
         const liveProducts: Product[] = [];
         for (const item of searchResults) {
           if (!item.Product_ID) continue;
@@ -65,14 +71,16 @@ function App() {
         }
 
         setProducts(liveProducts);
+        setCurrentIndex(0); // Reset index on new data
         setLoading(false);
       } catch (err) {
         console.error("Error fetching live products:", err);
         setLoading(false);
       }
-    };
+    });
 
-    fetchFromFirebase();
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   if (loading) {
