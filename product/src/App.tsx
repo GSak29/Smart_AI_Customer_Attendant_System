@@ -84,7 +84,20 @@ function App() {
   }, []);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center font-sans">Loading products...</div>;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center font-sans bg-slate-50">
+        <div className="pyramid-loader">
+          <div className="wrapper">
+            <span className="side side1"></span>
+            <span className="side side2"></span>
+            <span className="side side3"></span>
+            <span className="side side4"></span>
+            <span className="shadow"></span>
+          </div>
+        </div>
+        <p className="mt-8 text-xl font-bold text-slate-800 tracking-wide">Loading...</p>
+      </div>
+    );
   }
 
   if (products.length === 0) {
