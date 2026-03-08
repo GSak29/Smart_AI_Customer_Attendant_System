@@ -6,6 +6,7 @@ import re
 import firebase_admin
 from firebase_admin import credentials, firestore, storage
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor
 
 # Load environment variables
 load_dotenv()
@@ -217,24 +218,33 @@ def main():
         display_cols = ['Product_ID', 'Product_Name', 'Category', 'Price_Min_INR', 'Price_Max_INR', 'Stock_Quantity', 'Material_Type', 'Wood_Type', 'Size_Description']
         display_cols = [c for c in display_cols if c in results.columns]
         
-        for idx, row in results.iterrows():
+        # Fetch Images in Parallel
+        print("\nFetching product images from Firestore...")
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            # Map products to their image fetch tasks
+            def process_product(row_tuple):
+                idx, row = row_tuple
+                product_data = {}
+                for col in display_cols:
+                    val = row[col]
+                    if pd.isna(val):
+                        val = ""
+                    product_data[col] = val
+                
+                # Fetch Image
+                image_url = get_product_image(row['Product_ID'])
+                product_data['image_url'] = image_url
+                return product_data
+
+            products_list = list(executor.map(process_product, results.iterrows()))
+
+        # Display results (already fetched)
+        for prod in products_list:
             print("-" * 20)
-            product_data = {}
-            for col in display_cols:
-                val = row[col]
-                print(f"{col}: {val}")
-                # Handle NaN
-                if pd.isna(val):
-                    val = ""
-                product_data[col] = val
-            
-            # Fetch Image
-            image_url = get_product_image(row['Product_ID'])
-            product_data['image_url'] = image_url
-            print(f"Image URL: {image_url}")
-            
-            products_list.append(product_data)
-            
+            for k, v in prod.items():
+                if k != 'image_url':
+                    print(f"{k}: {v}")
+            print(f"Image URL: {prod['image_url']}")
             print("-" * 20)
             
         # Export to RTDB

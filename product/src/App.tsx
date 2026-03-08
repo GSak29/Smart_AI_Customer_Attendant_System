@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
 import { ref, onValue } from 'firebase/database';
-import { db, rtdb } from './firebase';
+import { rtdb } from './firebase';
 
 interface Product {
   Product_ID: string;
@@ -32,55 +31,52 @@ function App() {
   useEffect(() => {
     const rtdbRef = ref(rtdb, 'extracted_products');
 
-    const unsubscribe = onValue(rtdbRef, async (snapshot) => {
-      setLoading(true);
+    const unsubscribe = onValue(rtdbRef, (snapshot) => {
       try {
-        let searchResults: any[] = [];
-        if (snapshot.exists()) {
-          searchResults = snapshot.val() || [];
-        }
-
-        if (searchResults.length === 0) {
+        if (!snapshot.exists()) {
           setProducts([]);
           setLoading(false);
           return;
         }
 
-        // Fetch full live details from Firebase for each ID
-        const liveProducts: Product[] = [];
-        for (const item of searchResults) {
-          if (!item.Product_ID) continue;
+        const data = snapshot.val();
+        // RTDB sometimes returns objects for arrays with gaps
+        const searchResults: any[] = Array.isArray(data) ? data : Object.values(data || {});
 
-          const docRef = doc(db, 'products', item.Product_ID.toString());
-          const docSnap = await getDoc(docRef);
+        const processedProducts: Product[] = searchResults
+          .filter(item => item && item.Product_ID)
+          .map(item => ({
+            ...item,
+            Image_URL: item.Image_URL || item.image_url || 'https://placehold.co/600x400?text=No+Image'
+          } as Product));
 
-          if (docSnap.exists()) {
-            const dbData = docSnap.data();
-            liveProducts.push({
-              ...item,
-              ...dbData,
-              Image_URL: dbData.Image_URL || dbData.image_url || item.image_url || item.Image_URL
-            } as Product);
-          } else {
-            console.warn(`Product ID ${item.Product_ID} not found in live database. Using local fallback.`);
-            liveProducts.push({
-              ...item,
-              Image_URL: item.image_url || item.Image_URL || 'https://placehold.co/600x400?text=No+Image',
-            } as Product);
-          }
-        }
-
-        setProducts(liveProducts);
-        setCurrentIndex(0); // Reset index on new data
-        setLoading(false);
+        setProducts(processedProducts);
+        setCurrentIndex(0);
       } catch (err) {
-        console.error("Error fetching live products:", err);
+        console.error("Error processing products from RTDB:", err);
+      } finally {
         setLoading(false);
       }
+    }, (error) => {
+      console.error("RTDB Listener Error:", error);
+      setLoading(false);
     });
 
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    // Fallback: stop loading after 10 seconds if no response from Firebase
+    const timeoutId = setTimeout(() => {
+      setLoading(prev => {
+        if (prev) {
+          console.warn("RTDB Fetch timed out after 10s. Forcing loading = false.");
+          return false;
+        }
+        return prev;
+      });
+    }, 10000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   if (loading) {
@@ -95,7 +91,7 @@ function App() {
             <span className="shadow"></span>
           </div>
         </div>
-        <p className="mt-8 text-xl font-bold text-slate-800 tracking-wide">Loading...</p>
+        <p className="mt-8 text-xl font-bold text-slate-800 tracking-wide">Loading Catalog...</p>
       </div>
     );
   }
