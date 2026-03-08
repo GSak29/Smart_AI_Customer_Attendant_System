@@ -1,0 +1,64 @@
+Coding : Longest length of subarray which equals target, queue implementation
+Snippet : even position elements in linked list, middle element from array, move negative elements to one side in array, reverse doubly linked list, stack using structures
+Largest and second largest in array, Min max and avg of array, Valid parenthesis, Negative elements to one side and positive to other,Odd position of linkedlist,Remove duplicate in linkedlist,Snippet
+1.min,max,avg of an array
+2.print odd position of an linked list
+3.reverse the doubly linked list
+4.balanced parenthesis,
+5.largest and second largest  element in the array, 
+10 mark
+1.Binary Tree
+*insert a node
+*inorder traversal
+*preorder traversal
+*postorder trevarsal
+2.Find the next largest element in the array if it is present replace with that number otherwise replace with -1
+DSA
+Time and space complexity 
+Sorting 
+1. Merge sort 
+2. ⁠Quick sort
+Searching 
+1. Binary search
+2. ⁠Koko Eating Bananas
+3. ⁠Minimum number of days to make m bouquets
+Recursion 
+1. Unique paths
+2. ⁠Number of paths in a matrix with K coins
+3. ⁠Express a sum of power of natural numbers
+4. ⁠Combination sum
+5. ⁠Path sum
+Subsequence
+1. Longest common subsequence 
+2. ⁠Longest increasing/dec subsequence 
+3. ⁠Longest palindromic subsequence 
+Substring 
+1. Largest subarray with 0 sum
+2. ⁠Longest valid parentheses 
+3. ⁠Longest palindromic substring
+4. ⁠Longest substring without repeating characters 
+5. ⁠Minimum window substring
+Subset
+1. Subset
+2. ⁠Subset sum
+3. ⁠Permutations 
+Stack 
+1. Next greater element 
+2. ⁠Valid parentheses 
+Queue,Priority 
+1. Sliding window maximum 
+Linkedlist
+1. Reverse a linkedlist
+BST 
+1. Validate BST
+Tree dfs
+1. Same tree
+2. ⁠Mirror tree
+Tree bfs 
+1. Zig zag traversal
+Graph - Bfs 
+1. Word ladder
+Graph - Dfs
+1. Number of islands
+2. ⁠cheapest flight
+Pattern printing - 3 problems

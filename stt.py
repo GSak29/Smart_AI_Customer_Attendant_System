@@ -1,9 +1,11 @@
-import speech_recognition as sr
+import sounddevice as sd
+from scipy.io.wavfile import write
 
-r = sr.Recognizer()
-with sr.Microphone() as source:
-    print("Speak...")
-    audio = r.listen(source)
+fs = 16000  # Sample rate
+seconds = 5  # Recording duration
 
-    text = r.recognize_google(audio)
-    print("You said:", text)
+print("🎤 Speak now...")
+audio = sd.rec(int(seconds * fs), samplerate=fs, channels=1)
+sd.wait()
+write("voice.wav", fs, audio)
+print("✅ Recording saved as voice.wav")
